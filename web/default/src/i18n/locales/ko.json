@@ -1,0 +1,12 @@
+{
+  "translation": {
+    "Change language": "언어 변경",
+    "Language Preferences": "언어 설정",
+    "Set the language used across the interface": "인터페이스에서 사용할 언어를 설정합니다",
+    "Interface Language": "인터페이스 언어",
+    "Language preferences sync across your signed-in devices and affect API error messages.": "언어 설정은 로그인한 모든 기기에 동기화되며 API 오류 메시지 언어에도 적용됩니다.",
+    "Select language": "언어 선택",
+    "Language preference saved": "언어 설정이 저장되었습니다",
+    "Failed to update settings": "설정 업데이트에 실패했습니다"
+  }
+}
