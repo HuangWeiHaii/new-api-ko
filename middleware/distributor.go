@@ -55,7 +55,7 @@ func Distribute() func(c *gin.Context) {
 			// Select a channel for the user
 			// check token model mapping
 			modelLimitEnable := common.GetContextKeyBool(c, constant.ContextKeyTokenModelLimitEnabled)
-			if modelLimitEnable {
+			if modelLimitEnable && (shouldSelectChannel || modelRequest.Model != "") {
 				s, ok := common.GetContextKey(c, constant.ContextKeyTokenModelLimit)
 				if !ok {
 					// token model limit is empty, all models are not allowed
@@ -244,6 +244,7 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 		} else if c.Request.Method == http.MethodGet {
 			relayMode = relayconstant.RelayModeVideoFetchByID
 			shouldSelectChannel = false
+			fillModelRequestFromStoredTask(c, &modelRequest)
 		}
 		c.Set("relay_mode", relayMode)
 	} else if strings.Contains(c.Request.URL.Path, "/v1/video/generations") {
@@ -258,6 +259,7 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 		} else if c.Request.Method == http.MethodGet {
 			relayMode = relayconstant.RelayModeVideoFetchByID
 			shouldSelectChannel = false
+			fillModelRequestFromStoredTask(c, &modelRequest)
 		}
 		if _, ok := c.Get("relay_mode"); !ok {
 			c.Set("relay_mode", relayMode)
@@ -340,6 +342,34 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 		modelRequest.Model = ratio_setting.WithCompactModelSuffix(modelRequest.Model)
 	}
 	return &modelRequest, shouldSelectChannel, nil
+}
+
+func fillModelRequestFromStoredTask(c *gin.Context, modelRequest *ModelRequest) {
+	if modelRequest == nil || modelRequest.Model != "" {
+		return
+	}
+	taskID := c.Param("task_id")
+	if taskID == "" {
+		taskID = c.GetString("task_id")
+	}
+	userID := c.GetInt("id")
+	if taskID == "" || userID == 0 {
+		return
+	}
+
+	task, exists, err := model.GetByTaskId(userID, taskID)
+	if err != nil {
+		common.SysLog(fmt.Sprintf("failed to get task model for token limit check: %v", err))
+		return
+	}
+	if !exists || task == nil {
+		return
+	}
+	if task.Properties.OriginModelName != "" {
+		modelRequest.Model = task.Properties.OriginModelName
+		return
+	}
+	modelRequest.Model = task.Properties.UpstreamModelName
 }
 
 func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, modelName string) *types.NewAPIError {
