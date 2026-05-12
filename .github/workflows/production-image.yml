@@ -1,0 +1,138 @@
+name: Publish production Docker image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ALIYUN_REGISTRY: ${{ secrets.ALIYUN_REGISTRY }}
+  ALIYUN_NAMESPACE: ${{ secrets.ALIYUN_NAMESPACE }}
+  ALIYUN_IMAGE_NAME: ${{ secrets.ALIYUN_IMAGE_NAME }}
+  ALIYUN_USERNAME: ${{ secrets.ALIYUN_USERNAME }}
+  ALIYUN_PASSWORD: ${{ secrets.ALIYUN_PASSWORD }}
+
+jobs:
+  build:
+    name: Build and push production image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Prepare image tags
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repo="${GITHUB_REPOSITORY,,}"
+          repo_name="${GITHUB_REPOSITORY#*/}"
+          short_sha="$(git rev-parse --short=12 HEAD)"
+          version="main-$(date -u +'%Y%m%d%H%M%S')-${short_sha}"
+          ghcr_image="ghcr.io/${repo}"
+          aliyun_image=""
+          aliyun_image_name="${ALIYUN_IMAGE_NAME:-${repo_name}}"
+
+          if [ -n "${ALIYUN_REGISTRY}" ] && \
+             [ -n "${ALIYUN_NAMESPACE}" ] && \
+             [ -n "${ALIYUN_USERNAME}" ] && \
+             [ -n "${ALIYUN_PASSWORD}" ]; then
+            aliyun_image="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/${aliyun_image_name}"
+          fi
+
+          {
+            echo "tags<<EOF"
+            echo "${ghcr_image}:production"
+            echo "${ghcr_image}:main"
+            echo "${ghcr_image}:${short_sha}"
+            echo "${ghcr_image}:${version}"
+            if [ -n "${aliyun_image}" ]; then
+              echo "${aliyun_image}:production"
+              echo "${aliyun_image}:main"
+              echo "${aliyun_image}:${short_sha}"
+              echo "${aliyun_image}:${version}"
+            fi
+            echo "EOF"
+
+            echo "metadata_images<<EOF"
+            echo "${ghcr_image}"
+            if [ -n "${aliyun_image}" ]; then
+              echo "${aliyun_image}"
+            fi
+            echo "EOF"
+
+            echo "ghcr_image=${ghcr_image}"
+            echo "aliyun_image=${aliyun_image}"
+            echo "short_sha=${short_sha}"
+            echo "version=${version}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Aliyun ACR
+        if: ${{ env.ALIYUN_REGISTRY != '' && env.ALIYUN_NAMESPACE != '' && env.ALIYUN_USERNAME != '' && env.ALIYUN_PASSWORD != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ALIYUN_REGISTRY }}
+          username: ${{ env.ALIYUN_USERNAME }}
+          password: ${{ env.ALIYUN_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.metadata_images }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUN_INSTALL_NETWORK_CONCURRENCY=8
+            GOPROXY=https://goproxy.cn,direct
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
+
+      - name: Image summary
+        shell: bash
+        run: |
+          {
+            echo "### Production image"
+            echo
+            echo "- GHCR: \`${{ steps.image.outputs.ghcr_image }}:production\`"
+            if [ -n "${{ steps.image.outputs.aliyun_image }}" ]; then
+              echo "- Aliyun ACR: \`${{ steps.image.outputs.aliyun_image }}:production\`"
+            fi
+            echo "- Version tag: \`${{ steps.image.outputs.version }}\`"
+            echo "- Commit tag: \`${{ steps.image.outputs.short_sha }}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
