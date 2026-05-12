@@ -43,6 +43,7 @@ i18n
       fr: frTranslation,
       ru: ruTranslation,
       ja: jaTranslation,
+      'ko-KR': enTranslation,
       vi: viTranslation,
     },
     fallbackLng: 'zh-CN',

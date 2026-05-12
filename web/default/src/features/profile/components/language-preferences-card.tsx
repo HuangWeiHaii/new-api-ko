@@ -40,6 +40,7 @@ const LANGUAGE_OPTIONS = [
   { value: 'fr', label: 'Français' },
   { value: 'ru', label: 'Русский' },
   { value: 'ja', label: '日本語' },
+  { value: 'ko', label: '한국어' },
   { value: 'vi', label: 'Tiếng Việt' },
 ] as const
 
@@ -47,6 +48,7 @@ function normalizeLanguage(value?: string | null): string {
   if (!value) return 'en'
   const normalized = value.trim().replace(/_/g, '-').toLowerCase()
   if (normalized.startsWith('zh')) return 'zh'
+  if (normalized.startsWith('ko')) return 'ko'
   return LANGUAGE_OPTIONS.some((lang) => lang.value === normalized)
     ? normalized
     : 'en'

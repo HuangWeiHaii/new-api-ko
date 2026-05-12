@@ -33,6 +33,7 @@ const languageOptions = [
 	{ value: 'fr', label: 'Français'},
 	{ value: 'ru', label: 'Русский'},
 	{ value: 'ja', label: '日本語'},
+	{ value: "ko-KR", label: "한국어" },
 	{ value: "vi", label: "Tiếng Việt" },
 ];
 

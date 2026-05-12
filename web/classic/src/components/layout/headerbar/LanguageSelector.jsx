@@ -58,6 +58,12 @@ const LanguageSelector = ({ currentLang, onLanguageChange, t }) => {
             日本語
           </Dropdown.Item>
           <Dropdown.Item
+            onClick={() => onLanguageChange('ko-KR')}
+            className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'ko-KR' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
+          >
+            한국어
+          </Dropdown.Item>
+          <Dropdown.Item
             onClick={() => onLanguageChange('ru')}
             className={`!px-3 !py-1.5 !text-sm !text-semi-color-text-0 dark:!text-gray-200 ${currentLang === 'ru' ? '!bg-semi-color-primary-light-default dark:!bg-blue-600 !font-semibold' : 'hover:!bg-semi-color-fill-1 dark:hover:!bg-gray-600'}`}
           >

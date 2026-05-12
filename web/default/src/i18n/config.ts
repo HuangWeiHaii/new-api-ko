@@ -32,6 +32,7 @@ export const resources = {
   fr,
   ru,
   ja,
+  ko: en,
   vi,
 } as const
 
@@ -41,7 +42,7 @@ i18n
   .init({
     resources,
     fallbackLng: 'en',
-    supportedLngs: ['en', 'zh', 'fr', 'ru', 'ja', 'vi'],
+    supportedLngs: ['en', 'zh', 'fr', 'ru', 'ja', 'ko', 'vi'],
     load: 'languageOnly', // Convert zh-CN -> zh
     nsSeparator: false, // Allow literal colons in keys (e.g., URLs, labels)
     debug: import.meta.env.DEV,
